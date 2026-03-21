@@ -21,7 +21,13 @@ const int shapes[7][4][16]
 };
 typedef struct{ int type, rotation, x,y;}Piece;
 int board[ROWS][COLS]={0};
-void SpawnPiece()
+Piece currentPiece;
+void SpawnPiece(){
+  currentPiece.type=rand()%7;
+  currentPiece.rotation=0;
+  currentPiece.x=COLS/2 -2;
+  currentPiece.y=0;
+}
 bool check_collision(GameState *game, Piece *piece, int dx, int dy);
 void merge_piece(GameState *game);
 int clear_lines(GameState *game);
