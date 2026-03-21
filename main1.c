@@ -7,6 +7,8 @@
 #include <time.h>
 #include <stdbool.h>
 
+#define COLS 10
+#define ROWS 20
 const int shapes[7][4][16]
 {
 {{0,0,0,0, 1,1,1,1, 0,0,0,0, 0,0,0,0}, {0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0}, {0,0,0,0, 0,0,0,0, 1,1,1,1, 0,0,0,0}, {0,1,0,0, 0,1,0,0, 0,1,0,0, 0,1,0,0}},//I
@@ -18,7 +20,8 @@ const int shapes[7][4][16]
 {{0,0,1,0, 1,1,1,0, 0,0,0,0, 0,0,0,0}, {0,1,0,0, 0,1,0,0, 0,1,1,0, 0,0,0,0}, {0,0,0,0, 1,1,1,0, 1,0,0,0, 0,0,0,0}, {1,1,0,0, 0,1,0,0, 0,1,0,0, 0,0,0,0}}//L
 };
 typedef struct{ int type, rotation, x,y;}Piece;
-void spawnpiece(Piece *p, int type);
+int board[ROWS][COLS]={0};
+void SpawnPiece()
 bool check_collision(GameState *game, Piece *piece, int dx, int dy);
 void merge_piece(GameState *game);
 int clear_lines(GameState *game);
