@@ -232,4 +232,164 @@ void lock_piece(Game *game) {
     clear_lines(game);
 }
 
+void game_init(Game *game) {
+    memset(game, 0, sizeof(Game));
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
+    TTF_Init();
+    game->window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    
+    // Fallback if fonts don't exist in user path
+    game->font = TTF_OpenFont("assets/font.ttf", 18);
+    game->font_large = TTF_OpenFont("assets/font.ttf", 32);
+    
+    srand(time(NULL));
+    piece_bag_shuffle(game);
+    game->next = piece_get_next(game);
+    game->drop_interval = INITIAL_DROP_INTERVAL;
+    game->state = STATE_PLAYING;
+    game->running = true;
+    game->level = 1;
+    game_spawn_next(game);
 
+    for (int i = 0; i < MAX_BG_PARTICLES; i++) {
+        game->bg_particles[i].active = true;
+        game->bg_particles[i].x = rand() % WINDOW_WIDTH;
+        game->bg_particles[i].y = rand() % WINDOW_HEIGHT;
+        game->bg_particles[i].vy = 20 + rand() % 40;
+        game->bg_particles[i].size = 1 + rand() % 3;
+        game->bg_particles[i].alpha = 0.1f + (rand() % 20) / 100.0f;
+    }
+}
+
+void game_update(Game *game, float dt) {
+    if (game->state != STATE_PLAYING) return;
+    
+    for (int i = 0; i < MAX_BG_PARTICLES; i++) {
+        game->bg_particles[i].y += game->bg_particles[i].vy * dt;
+        if (game->bg_particles[i].y > WINDOW_HEIGHT) {
+            game->bg_particles[i].y = -10;
+            game->bg_particles[i].x = rand() % WINDOW_WIDTH;
+        }
+    }
+
+    for (int i = 0; i < MAX_FLOAT_TEXTS; i++) {
+        if (!game->float_texts[i].active) continue;
+        game->float_texts[i].y -= 30 * dt;
+        Uint32 age = SDL_GetTicks() - game->float_texts[i].start_time;
+        if (age > FLOAT_TEXT_DURATION) game->float_texts[i].active = false;
+        else game->float_texts[i].alpha = 1.0f - (float)age / FLOAT_TEXT_DURATION;
+    }
+
+    if (game->flash_count > 0) {
+        if (SDL_GetTicks() - game->flash_start_time > FLASH_DURATION) finalize_clear(game);
+        return;
+    }
+
+    Uint32 now = SDL_GetTicks();
+    int interval = game->soft_dropping ? SOFT_DROP_INTERVAL : game->drop_interval;
+    if (now - game->last_drop_time > (Uint32)interval) {
+        if (!check_collision(game, &game->current, 0, 1, 0)) {
+            game->current.y++;
+            game->last_drop_time = now;
+            game->lock_timer_active = false;
+        } else {
+            if (!game->lock_timer_active) {
+                game->lock_timer = now;
+                game->lock_timer_active = true;
+            } else if (now - game->lock_timer > LOCK_DELAY) {
+                lock_piece(game);
+            }
+        }
+    }
+}
+
+void render_block(SDL_Renderer *r, int x, int y, SDL_Color c, bool ghost) {
+    SDL_Rect rect = { x, y, CELL_SIZE - 1, CELL_SIZE - 1 };
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(r, c.r, c.g, c.b, ghost ? 50 : 255);
+    SDL_RenderFillRect(r, &rect);
+    if (!ghost) {
+        SDL_SetRenderDrawColor(r, 255, 255, 255, 40);
+        SDL_RenderDrawRect(r, &rect);
+    }
+}
+
+void game_render(Game *game) {
+    SDL_SetRenderDrawColor(game->renderer, 15, 15, 20, 255);
+    SDL_RenderClear(game->renderer);
+
+    for (int i = 0; i < MAX_BG_PARTICLES; i++) {
+        SDL_SetRenderDrawColor(game->renderer, 200, 200, 255, (Uint8)(game->bg_particles[i].alpha * 255));
+        SDL_Rect p = {(int)game->bg_particles[i].x, (int)game->bg_particles[i].y, (int)game->bg_particles[i].size, (int)game->bg_particles[i].size};
+        SDL_RenderFillRect(game->renderer, &p);
+    }
+
+    SDL_SetRenderDrawColor(game->renderer, 30, 30, 40, 255);
+    SDL_Rect board_rect = { BOARD_OFFSET_X, BOARD_OFFSET_Y, BOARD_WIDTH * CELL_SIZE, BOARD_HEIGHT * CELL_SIZE };
+    SDL_RenderFillRect(game->renderer, &board_rect);
+
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+        for (int x = 0; x < BOARD_WIDTH; x++) {
+            if (game->board[y][x]) {
+                render_block(game->renderer, BOARD_OFFSET_X + x * CELL_SIZE, BOARD_OFFSET_Y + y * CELL_SIZE, piece_colors[game->board[y][x]-1], false);
+            }
+        }
+    }
+
+    Piece ghost = game->current;
+    while (!check_collision(game, &ghost, 0, 1, 0)) ghost.y++;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            if (shapes[ghost.type][ghost.rotation][i][j]) {
+                render_block(game->renderer, BOARD_OFFSET_X + (ghost.x + j) * CELL_SIZE, BOARD_OFFSET_Y + (ghost.y + i) * CELL_SIZE, piece_colors[ghost.type], true);
+            }
+        }
+    }
+
+    if (game->flash_count == 0) {
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                if (shapes[game->current.type][game->current.rotation][i][j]) {
+                    render_block(game->renderer, BOARD_OFFSET_X + (game->current.x + j) * CELL_SIZE, BOARD_OFFSET_Y + (game->current.y + i) * CELL_SIZE, piece_colors[game->current.type], false);
+                }
+            }
+        }
+    }
+
+    if (game->font) {
+        for (int i = 0; i < MAX_FLOAT_TEXTS; i++) {
+            if (!game->float_texts[i].active) continue;
+            SDL_Color tc = {255, 255, 255, (Uint8)(game->float_texts[i].alpha * 255)};
+            SDL_Surface *s = TTF_RenderText_Blended(game->font, game->float_texts[i].text, tc);
+            if (s) {
+                SDL_Texture *t = SDL_CreateTextureFromSurface(game->renderer, s);
+                SDL_Rect r = {(int)game->float_texts[i].x - s->w/2, (int)game->float_texts[i].y, s->w, s->h};
+                SDL_RenderCopy(game->renderer, t, NULL, &r);
+                SDL_FreeSurface(s); SDL_DestroyTexture(t);
+            }
+        }
+
+        char buf[64];
+        sprintf(buf, "SCORE: %d   LEVEL: %d", game->score, game->level);
+        SDL_Surface *ss = TTF_RenderText_Blended(game->font, buf, (SDL_Color){255,255,255,255});
+        if (ss) {
+            SDL_Texture *st = SDL_CreateTextureFromSurface(game->renderer, ss);
+            SDL_Rect sr = { BOARD_OFFSET_X, 15, ss->w, ss->h };
+            SDL_RenderCopy(game->renderer, st, NULL, &sr);
+            SDL_FreeSurface(ss); SDL_DestroyTexture(st);
+        }
+    }
+
+    if (game->state == STATE_GAME_OVER && game->font_large) {
+        SDL_Surface *go = TTF_RenderText_Blended(game->font_large, "GAME OVER", (SDL_Color){255,50,50,255});
+        if (go) {
+            SDL_Texture *got = SDL_CreateTextureFromSurface(game->renderer, go);
+            SDL_Rect gor = { WINDOW_WIDTH/2 - go->w/2, WINDOW_HEIGHT/2 - go->h/2, go->w, go->h };
+            SDL_RenderCopy(game->renderer, got, NULL, &gor);
+            SDL_FreeSurface(go); SDL_DestroyTexture(got);
+        }
+    }
+
+    SDL_RenderPresent(game->renderer);
+}
