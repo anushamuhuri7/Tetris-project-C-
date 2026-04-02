@@ -14,16 +14,12 @@
 #define CELL_SIZE     30
 #define BOARD_OFFSET_X ((WINDOW_WIDTH - BOARD_WIDTH * CELL_SIZE) / 2)
 #define BOARD_OFFSET_Y 50
-
 #define INITIAL_DROP_INTERVAL 800
 #define SOFT_DROP_INTERVAL    50
 #define MIN_DROP_INTERVAL     100
 #define LOCK_DELAY            500
 #define LINES_PER_LEVEL       10
-
 #define MAX_BG_PARTICLES      50
-#define MAX_DROP_PARTICLES    30
-#define DROP_PARTICLE_LIFE    600
 #define MAX_FLOAT_TEXTS       5
 #define FLOAT_TEXT_DURATION   1500
 #define FLASH_DURATION        250
@@ -53,24 +49,24 @@ typedef struct {
     SDL_Window   *window;
     SDL_Renderer *renderer;
     TTF_Font     *font;
-    TTF_Font     *font_large;    
+    TTF_Font     *font_large;
     GameState     state;
-    bool          running;
+    bool          running;    
     int           board[BOARD_HEIGHT][BOARD_WIDTH];
     Piece         current;
-    Piece         next;
+    Piece         next;    
     int           bag[NUM_PIECE_TYPES];
-    int           bag_index;
+    int           bag_index;    
     int           score;
     int           level;
-    int           lines_cleared;
+    int           lines_cleared;    
     Uint32        last_drop_time;
     int           drop_interval;
-    bool          soft_dropping;
+    bool          soft_dropping;    
     Uint32        lock_timer;
-    bool          lock_timer_active;
+    bool          lock_timer_active;    
     BGParticle    bg_particles[MAX_BG_PARTICLES];
-    FloatText     float_texts[MAX_FLOAT_TEXTS];
+    FloatText     float_texts[MAX_FLOAT_TEXTS];    
     int           flash_rows[4];
     int           flash_count;
     Uint32        flash_start_time;
@@ -126,6 +122,10 @@ static const SDL_Color piece_colors[NUM_PIECE_TYPES] = {
     { 100, 210, 130, 255 }, { 240, 100, 100, 255 }, { 90, 140, 240, 255 },
     { 245, 165,  80, 255 }
 };
+
+/* ===========================================================================
+ * LOGIC FUNCTIONS
+ * =========================================================================== */
 
 void piece_bag_shuffle(Game *game) {
     for (int i = 0; i < NUM_PIECE_TYPES; i++) game->bag[i] = i;
@@ -240,6 +240,7 @@ void game_init(Game *game) {
     game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     game->font = TTF_OpenFont("assets/font.ttf", 18);
     game->font_large = TTF_OpenFont("assets/font.ttf", 32);
+    
     srand(time(NULL));
     piece_bag_shuffle(game);
     game->next = piece_get_next(game);
