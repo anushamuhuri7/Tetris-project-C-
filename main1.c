@@ -238,11 +238,8 @@ void game_init(Game *game) {
     TTF_Init();
     game->window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    
-    // Fallback if fonts don't exist in user path
     game->font = TTF_OpenFont("assets/font.ttf", 18);
     game->font_large = TTF_OpenFont("assets/font.ttf", 32);
-    
     srand(time(NULL));
     piece_bag_shuffle(game);
     game->next = piece_get_next(game);
@@ -392,4 +389,51 @@ void game_render(Game *game) {
     }
 
     SDL_RenderPresent(game->renderer);
+}
+
+int main(int argc, char *argv[]) {
+    Game game;
+    game_init(&game);
+    SDL_Event e;
+    Uint32 last_time = SDL_GetTicks();
+
+    while (game.running) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) game.running = false;
+            if (e.type == SDL_KEYDOWN) {
+                if (game.state == STATE_PLAYING) {
+                    switch (e.key.keysym.sym) {
+                        case SDLK_LEFT:  if (!check_collision(&game, &game.current, -1, 0, 0)) game.current.x--; break;
+                        case SDLK_RIGHT: if (!check_collision(&game, &game.current, 1, 0, 0))  game.current.x++; break;
+                        case SDLK_DOWN:  game.soft_dropping = true; break;
+                        case SDLK_UP:    if (!check_collision(&game, &game.current, 0, 0, 1))  game.current.rotation = (game.current.rotation + 1) % 4; break;
+                        case SDLK_SPACE: while(!check_collision(&game, &game.current, 0, 1, 0)) game.current.y++; lock_piece(&game); break;
+                        case SDLK_ESCAPE: game.running = false; break;
+                    }
+                } else if (game.state == STATE_GAME_OVER) {
+                    if (e.key.keysym.sym == SDLK_r) {
+                        GameState old_state = game.state;
+                        game_init(&game);
+                    }
+                }
+            }
+            if (e.type == SDL_KEYUP && e.key.keysym.sym == SDLK_DOWN) game.soft_dropping = false;
+        }
+
+        Uint32 now = SDL_GetTicks();
+        float dt = (now - last_time) / 1000.0f;
+        last_time = now;
+
+        game_update(&game, dt);
+        game_render(&game);
+        SDL_Delay(1);
+    }
+
+    if (game.font) TTF_CloseFont(game.font);
+    if (game.font_large) TTF_CloseFont(game.font_large);
+    SDL_DestroyRenderer(game.renderer);
+    SDL_DestroyWindow(game.window);
+    TTF_Quit();
+    SDL_Quit();
+    return 0;
 }
