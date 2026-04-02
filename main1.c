@@ -7,28 +7,25 @@
 #include <time.h>
 #include <stdbool.h>
 
-#define COLS 10
-#define ROWS 20
-const int shapes[7][4][16]
-{
-{{0,0,0,0, 1,1,1,1, 0,0,0,0, 0,0,0,0}, {0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0}, {0,0,0,0, 0,0,0,0, 1,1,1,1, 0,0,0,0}, {0,1,0,0, 0,1,0,0, 0,1,0,0, 0,1,0,0}},//I
-{{0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0}, {0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0}, {0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0}, {0,0,0,0, 0,1,1,0, 0,1,1,0, 0,0,0,0}},//O
-{0,1,0,0, 1,1,1,0, 0,0,0,0, 0,0,0,0}, {0,1,0,0, 0,1,1,0, 0,1,0,0, 0,0,0,0}, {0,0,0,0, 1,1,1,0, 0,1,0,0, 0,0,0,0}, {0,1,0,0, 1,1,0,0, 0,1,0,0, 0,0,0,0},//T
-{{0,1,1,0, 1,1,0,0, 0,0,0,0, 0,0,0,0}, {0,1,0,0, 0,1,1,0, 0,0,1,0, 0,0,0,0}, {0,0,0,0, 0,1,1,0, 1,1,0,0, 0,0,0,0}, {1,0,0,0, 1,1,0,0, 0,1,0,0, 0,0,0,0},//S
-{{1,1,0,0, 0,1,1,0, 0,0,0,0, 0,0,0,0}, {0,0,1,0, 0,1,1,0, 0,1,0,0, 0,0,0,0}, {0,0,0,0, 1,1,0,0, 0,1,1,0, 0,0,0,0}, {0,1,0,0, 1,1,0,0, 1,0,0,0, 0,0,0,0}},//Z
-{{1,0,0,0, 1,1,1,0, 0,0,0,0, 0,0,0,0}, {0,1,1,0, 0,1,0,0, 0,1,0,0, 0,0,0,0}, {0,0,0,0, 1,1,1,0, 0,0,1,0, 0,0,0,0}, {0,1,0,0, 0,1,0,0, 1,1,0,0, 0,0,0,0}},//J
-{{0,0,1,0, 1,1,1,0, 0,0,0,0, 0,0,0,0}, {0,1,0,0, 0,1,0,0, 0,1,1,0, 0,0,0,0}, {0,0,0,0, 1,1,1,0, 1,0,0,0, 0,0,0,0}, {1,1,0,0, 0,1,0,0, 0,1,0,0, 0,0,0,0}}//L
-};
-typedef struct{ int type, rotation, x,y;}Piece;
-int board[ROWS][COLS]={0};
-Piece currentPiece;
-void SpawnPiece(){
-  currentPiece.type=rand()%7;
-  currentPiece.rotation=0;
-  currentPiece.x=COLS/2 -2;
-  currentPiece.y=0;
-}
-bool check_collision(GameState *game, Piece *piece, int dx, int dy);
-void merge_piece(GameState *game);
-int clear_lines(GameState *game);
-bool rotate_piece(GameState *game);
+#define WINDOW_WIDTH  450
+#define WINDOW_HEIGHT 700
+#define BOARD_WIDTH   10
+#define BOARD_HEIGHT  20
+#define CELL_SIZE     30
+#define BOARD_OFFSET_X ((WINDOW_WIDTH - BOARD_WIDTH * CELL_SIZE) / 2)
+#define BOARD_OFFSET_Y 50
+
+#define INITIAL_DROP_INTERVAL 800
+#define SOFT_DROP_INTERVAL    50
+#define MIN_DROP_INTERVAL     100
+#define LOCK_DELAY            500
+#define LINES_PER_LEVEL       10
+
+#define MAX_BG_PARTICLES      50
+#define MAX_DROP_PARTICLES    30
+#define DROP_PARTICLE_LIFE    600
+#define MAX_FLOAT_TEXTS       5
+#define FLOAT_TEXT_DURATION   1500
+#define FLASH_DURATION        250
+
+
