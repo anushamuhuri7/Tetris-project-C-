@@ -270,7 +270,7 @@ void render_frame(Game *game) {
 int main(int argc, char *argv[]) {
     srand(time(NULL)); SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER); TTF_Init();
     Game game = {0};
-    game.window = SDL_CreateWindow("Tetris Pro", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    game.window = SDL_CreateWindow("Tetris ", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     game.renderer = SDL_CreateRenderer(game.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     game.font_label = TTF_OpenFont("assets/font.ttf", 18);
